@@ -41,3 +41,18 @@ jobs: # Trabajos
         with: # Parámetros
           name: dependency-check-reports # Nombre del artefacto
           path: target/dependency-check-report.* # Reportes HTML, XML y demás
+  sbom: # Segundo trabajo, genera el SBOM
+    runs-on: ubuntu-latest # Maquina linux de GitHub
+    steps: # pasos
+      - uses: actions/checkout@v4 # descarga mi código a esa computadora
+      - uses: actions/setup-java@v4 # instala Java
+        with: # Parametros
+          distribution: temurin # Tipo de Java que se instala
+          java-version: '17' # Versión de Java del lab
+      - name: Generar SBOM CycloneDX # crea el SBOM
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom # guarda bom.json y bom.xml en target/
+      - uses: actions/upload-artifact@v4 # guarda el SBOM para descargarlo
+        with: # Parametros
+          name: sbom-cyclonedx # Nombre del artefacto
+          path: target/bom.* # Los archivos bom.json y bom.xml que se crearon
+          
