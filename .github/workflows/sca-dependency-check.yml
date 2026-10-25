@@ -16,8 +16,8 @@ jobs: # Trabajos
       - uses: actions/setup-java@v4 # Instala Java
         with: # Parámetros
           distribution: temurin # Tipo de Java que se instala
-          java-version: '17' # Versión 17 del lab 
-      - uses: actions/cache@v4 # Guarda y reutiliza la base del NVD
+          java-version: '17' # Versión 17 del lab
+      - uses: actions/cache/restore@v4 # Recupera la base del NVD guardada antes
         with: # Parámetros
           path: ~/.m2/repository/org/owasp/dependency-check-data # Carpeta de la base del NVD
           key: nvd-${{ github.run_id }} # Clave nueva en cada ejecución
@@ -26,6 +26,11 @@ jobs: # Trabajos
         env: # Variables de entorno
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }} # La clave viene del secret de github
         run: mvn -B org.owasp:dependency-check-maven:13.0.0:check -Dformat=ALL -DnvdApiKey=$NVD_API_KEY -DossindexAnalyzerEnabled=false # Genera HTML, XML y SARIF en target/
+      - uses: actions/cache/save@v4 # Guarda la base del NVD para la próxima vez
+        if: always() # Se guarda aunque algo falle después
+        with: # Parámetros
+          path: ~/.m2/repository/org/owasp/dependency-check-data # Misma carpeta de la base
+          key: nvd-${{ github.run_id }} # Misma clave de esta ejecución
       - uses: github/codeql-action/upload-sarif@v4 # Sube el resultado a Code scanning
         if: always() # Aunque falle un paso anterior
         with: # Parámetros
