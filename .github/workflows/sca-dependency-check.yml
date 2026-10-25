@@ -1,0 +1,38 @@
+name: SCA Dependency-Check # Nombre del workflow
+on: # cuando ejecuta el pipeline
+  push: # Al hacer cambios
+    branches: [main] # a la rama main
+  pull_request: # Al abrir un pull request
+    branches: [main] # va hacia main
+  workflow_dispatch: # se puede ejecutar manualmente desde Actions
+permissions: # Permisos mínimos del pipeline
+  contents: read # Leer el código
+  security-events: write # Alertas en security
+jobs: # Trabajos
+  sca: # Único trabajo
+    runs-on: ubuntu-latest # Máquina Linux de GitHub
+    steps: # Pasos
+      - uses: actions/checkout@v4 # Descarga el código a esa compu
+      - uses: actions/setup-java@v4 # Instala Java
+        with: # Parámetros
+          distribution: temurin # Tipo de Java que se instala
+          java-version: '17' # Versión 17 del lab 
+      - uses: actions/cache@v4 # Guarda y reutiliza la base del NVD
+        with: # Parámetros
+          path: ~/.m2/repository/org/owasp/dependency-check-data # Carpeta de la base del NVD
+          key: nvd-${{ github.run_id }} # Clave nueva en cada ejecución
+          restore-keys: nvd- # Recupera la cache guardada la vez anterior
+      - name: Ejecutar Dependency-Check # Análisis SCA dependencia con vulnerabilidades
+        env: # Variables de entorno
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }} # La clave viene del secret de github
+        run: mvn -B org.owasp:dependency-check-maven:13.0.0:check -Dformat=ALL -DnvdApiKey=$NVD_API_KEY -DossindexAnalyzerEnabled=false # Genera HTML, XML y SARIF en target/
+      - uses: github/codeql-action/upload-sarif@v4 # Sube el resultado a Code scanning
+        if: always() # Aunque falle un paso anterior
+        with: # Parámetros
+          sarif_file: target/dependency-check-report.sarif # Archivo SARIF
+          category: dependencycheck # etiqueta para identificar este analisis
+      - uses: actions/upload-artifact@v4 # Guarda los reportes para descargarlos
+        if: always() # Aunque falle un paso anterior
+        with: # Parámetros
+          name: dependency-check-reports # Nombre del artefacto
+          path: target/dependency-check-report.* # Reportes HTML, XML y demás
